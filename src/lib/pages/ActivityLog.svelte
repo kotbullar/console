@@ -27,9 +27,10 @@
   const rows = $derived.by(() => {
     const q = search.trim().toLowerCase();
     return activity.rows.filter(
-      (r: LogRow) => (source === "all" || r.source === source) && (!q || `${r.name} ${r.text} ${r.detail} ${r.mhz}`.toLowerCase().includes(q)),
+      (r: LogRow) => (source === "all" || r.source === source || (source === "activations" && (r.source === "SOTA" || r.source === "POTA"))) && (!q || `${r.name} ${r.text} ${r.detail} ${r.mhz}`.toLowerCase().includes(q)),
     );
   });
+  const activationFilter = $derived(["activations", "SOTA", "POTA"].includes(source));
   const hasPos = (r: LogRow) => r.lat !== null && r.lon !== null;
 </script>
 
@@ -37,12 +38,13 @@
   <div class="pg-bar" role="toolbar" aria-label="Event Log">
     <div class="grp">
       <button class="btn" disabled={!connected || !!activity.busy} onclick={() => activity.refresh()}>Refresh</button>
-      <button class="btn" disabled={!rows.length} onclick={() => activity.csv(rows)} title="The rows shown, as a CSV file">Export CSV</button>
+      <button class="btn" disabled={!rows.length} onclick={() => activationFilter ? activity.activationCsv(rows) : activity.csv(rows)} title="The rows shown, as a CSV file">Export CSV</button>
     </div>
     <div class="grp">
       <label class="label" for="log-source">Source</label>
       <select id="log-source" aria-label="Source" bind:value={source}>
         <option value="all">All</option>
+        <option value="activations">SOTA / POTA</option>
         {#each sources as s (s)}<option value={s}>{s}</option>{/each}
       </select>
       <input type="search" placeholder="Find" aria-label="Find in the log" bind:value={search} />

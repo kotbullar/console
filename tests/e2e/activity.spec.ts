@@ -48,3 +48,24 @@ test("event log: the radio's records, newest first, by source, to CSV", async ({
     await expect(page).toHaveURL(/#\/aprs-map\?at=/);
   }
 });
+
+test("activation contacts travel from Tools to the CSV", async ({ page }) => {
+  test.skip(onRadio(), "uses a simulated activation");
+  await openConsole(page, "live");
+  await connect(page);
+  await page.getByRole("button", { name: "More Live View options" }).click();
+  await page.getByRole("button", { name: "Send a key sequence…" }).click();
+  const box = page.getByRole("combobox", { name: "Key sequence" });
+  await box.fill("MENU 0 3 8 MENU 4 4 4 8 1 # 0 0 0 1 MENU 2 2 # 1 # 2 MENU");
+  await box.press("Enter");
+  await expect.poll(() => state(page, (f) => f.radio.ui?.screen?.id), { timeout: 20_000 }).toBe("Activation");
+  await page.evaluate(() => { location.hash = "/activity"; });
+  await page.getByLabel("Source").selectOption("activations");
+  await expect(events(page)).toHaveCount(1);
+  await expect(events(page).first()).toContainText("A1A");
+  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export CSV" }).click()]);
+  expect(file.suggestedFilename()).toMatch(/^ferrite-.*-activations\.csv$/);
+  const csv = readFileSync(await file.path(), "utf8");
+  expect(csv).toContain("time_utc,program,reference,callsign,frequency_mhz,mode");
+  expect(csv).toContain('"POTA","IT-0001","A1A"');
+});

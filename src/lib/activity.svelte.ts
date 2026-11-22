@@ -91,6 +91,18 @@ class Activity {
     }
   }
 
+  async activationCsv(rows: LogRow[]) {
+    this.error = "";
+    const fields = rows.map((r) => [r.at === null ? "" : new Date(r.at).toISOString(), r.source, r.text, r.name, r.mhz, r.detail]);
+    const csv = ["time_utc,program,reference,callsign,frequency_mhz,mode",
+      ...fields.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(","))].join("\r\n") + "\r\n";
+    try {
+      await download(`ferrite-${stamp()}-activations.csv`, csv, "text/csv");
+    } catch (e) {
+      this.error = (e as Error).message;
+    }
+  }
+
   /** The rows shown (`rows`, filtered) as a CSV download, dated in local time. */
   csv(rows: LogRow[]) {
     const times = rows.map((r) => (r.at === null ? "" : new Date(r.at).toLocaleString())); // INBOX-6.1: unknown left blank

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 pub const AGO_UNKNOWN: u32 = u32::MAX;
 
 /// The sources a record names (LINK-42).
-pub const SOURCES: [&str; 8] = ["APRS", "Pager", "SAME", "DSC", "AIS", "DTMF", "Selcall", "GPS"];
+pub const SOURCES: [&str; 10] = ["APRS", "Pager", "SAME", "DSC", "AIS", "DTMF", "Selcall", "GPS", "SOTA", "POTA"];
 
 /// One record, with what its source's ID, x and y mean spelled out (`detail`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -61,6 +61,7 @@ fn detail(source: u8, id: u32, x: u16, y: u16) -> String {
         }
         4 => format!("MMSI {id}, course {x}°, {:.1} kn", y as f64 / 10.0),
         6 => format!("unit {id}"),
+        8 | 9 => ["FM", "NFM", "AM", "USB", "LSB", "CW", "WFM"].get(x as usize).copied().unwrap_or("").into(),
         _ => String::new(),
     }
 }
@@ -174,6 +175,22 @@ mod tests {
         assert!(all.iter().any(|r| r.source == "Pager" && r.detail.starts_with("capcode")));
         let c = csv(&all[..1], &["2026-10-20 12:00".into()]);
         assert!(c.starts_with("time,seq") && c.lines().count() == 2);
+    }
+
+    #[test]
+    fn activation_contact_keeps_reference_and_mode() {
+        let mut page = vec![5, 0, 0, 0, 1, 0, 1]; // next, held, count
+        page.extend(4u32.to_le_bytes());
+        page.extend(15u32.to_le_bytes());
+        page.extend([9, 0, 0]); // POTA, slot A, no flags
+        page.extend(14_550_000u32.to_le_bytes());
+        page.extend(0u32.to_le_bytes());
+        page.extend(1u16.to_le_bytes()); // NFM
+        page.extend(0u16.to_le_bytes());
+        page.extend(b"\x03A1A\x07IT-0001");
+        let log = parse_page(&page).unwrap();
+        let row = &log.records[0];
+        assert_eq!((row.source.as_str(), row.name.as_str(), row.text.as_str(), row.detail.as_str()), ("POTA", "A1A", "IT-0001", "NFM"));
     }
 
     #[test]
