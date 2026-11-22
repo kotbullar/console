@@ -1501,7 +1501,7 @@ mod tests {
         assert_eq!(beep.choices, ["Off", "On"]);
         let mic = item(&v, "0 8 3");
         assert_eq!((mic.kind, mic.value.as_str()), (Kind::Level, "7"));
-        assert_eq!(mic.choices, ["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+        assert_eq!(mic.choices, ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]);
         let tot = item(&v, "0 8 1");
         assert_eq!(tot.kind, Kind::Level);
         assert_eq!((tot.choices.first().unwrap().as_str(), tot.choices.last().unwrap().as_str()), ("30 s", "600 s"));
